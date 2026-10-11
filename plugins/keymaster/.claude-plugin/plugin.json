@@ -1,0 +1,23 @@
+{
+  "name": "keymaster",
+  "version": "0.1.0",
+  "description": "Secret tripwire: masks API keys, tokens, passwords and private keys in tool output before Claude, the transcript or your screen sees them, says so in a toast, and counts saves in the status line. /keymaster lists what was masked (kind and place, never the value).",
+  "author": { "name": "David Coulson", "url": "https://github.com/davidcoulson" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "skipTools": {
+      "type": "string",
+      "multiple": true,
+      "title": "Tools left unscanned",
+      "description": "Tool names (globs) whose output is passed through untouched.",
+      "default": ["mcp__keymaster__*", "TodoWrite", "mcp__ccd_session__*"]
+    },
+    "warnCommands": {
+      "type": "boolean",
+      "title": "Hint before risky commands",
+      "description": "Adds a note for Claude after commands that tend to dump secrets (docker inspect without --format, cat .env, printenv, Arr config.xml).",
+      "default": true
+    }
+  },
+  "license": "MIT"
+}
