@@ -1,0 +1,14 @@
+{
+  "name": "reef",
+  "version": "0.1.0",
+  "description": "Your homelab as an aquarium (/reef): every Docker container is a fish coloured by its stack, unhealthy ones float belly-up, the Ollama GPU is a heater that glows while a model is loaded, Home Assistant is a lighthouse that blinks red with repairs, and a crab walks the sand for each side session at work.",
+  "author": { "name": "David Coulson", "url": "https://github.com/davidcoulson" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "unraidServer": { "type": "string", "title": "Unraid MCP server", "description": "As /mcp lists it; read-only calls.", "default": "plugin:unraid-mcp:unraid-mcp" },
+    "haServer": { "type": "string", "title": "Home Assistant MCP server", "description": "As /mcp lists it, or its tool-name spelling; empty leaves the lighthouse dark.", "default": "9701d7dd-0c3d-4d64-8a88-8109a1430f1b" },
+    "ollamaUrl": { "type": "string", "title": "Ollama URL", "description": "GET /api/ps only, for the heater.", "default": "http://10.2.6.50:11434" },
+    "swimmers": { "type": "number", "title": "Animated fish", "description": "At most this many fish swim; the rest hover, which keeps the pane light.", "default": 24 }
+  },
+  "license": "MIT"
+}

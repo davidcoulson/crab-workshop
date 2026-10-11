@@ -3,3 +3,4 @@ plugins/*/.claude-plugin/types/
 plugins/*/tsconfig.json
 .typecheck/
 node_modules/
+preview/
