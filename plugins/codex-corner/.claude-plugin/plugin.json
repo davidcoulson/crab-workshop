@@ -1,0 +1,8 @@
+{
+  "name": "codex-corner",
+  "version": "0.1.0",
+  "description": "A boxing ring for Codex adversarial reviews: each review is a round, your crab against the Codex bot, with findings by severity, until the verdict is approve and the bot goes down. Rounds are kept per repo and branch; /codex-card prints the bout.",
+  "author": { "name": "David Coulson", "url": "https://github.com/davidcoulson" },
+  "types": "./types/index.d.ts",
+  "license": "MIT"
+}
