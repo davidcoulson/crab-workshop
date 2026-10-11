@@ -1,0 +1,37 @@
+{
+  "name": "where-am-i",
+  "version": "0.1.0",
+  "description": "Shows which machine and repo a session runs in (Mac or the claude-code container, repo, branch, fork) in the status line, and nudges Claude when it reaches for the container from the Mac or runs a repo's tests on the wrong host.",
+  "author": { "name": "David Coulson", "url": "https://github.com/davidcoulson" },
+  "userConfig": {
+    "hosts": {
+      "type": "string",
+      "multiple": true,
+      "title": "Host labels",
+      "description": "hostname-glob=label pairs, first match wins, e.g. claude-code*=🐧 claude-code. Unmatched: 🍎 Mac on macOS, 🐳 <host> in a container, 🐧 <host> elsewhere.",
+      "default": []
+    },
+    "homes": {
+      "type": "string",
+      "multiple": true,
+      "title": "Where each repo's dev work runs",
+      "description": "repo-glob=mac|container pairs. Running a build or test of a matching repo on the other kind of host adds a note for Claude.",
+      "default": [
+        "ha-unraid-management-agent=container",
+        "unraid-management-agent=container",
+        "ha-ollama-monitor=container",
+        "unraid-storage-topology=container",
+        "local-llm-mcp=container",
+        "claude-code-container=container"
+      ]
+    },
+    "containerTargets": {
+      "type": "string",
+      "multiple": true,
+      "title": "SSH targets that mean the dev container or Unraid host",
+      "description": "Words that, after ssh/scp/rsync on the Mac, mean work that belongs in an UnRAID SSH session instead.",
+      "default": ["unraid", "claude-code", "10.2.3.4", "10.2.6.51"]
+    }
+  },
+  "license": "MIT"
+}
