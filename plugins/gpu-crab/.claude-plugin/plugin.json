@@ -1,0 +1,28 @@
+{
+  "name": "gpu-crab",
+  "version": "0.1.0",
+  "description": "While a local-llm tool runs on your Ollama box, a crab on a treadmill shows the loaded model, VRAM, GPU/CPU split and elapsed time above the prompt (amber when a model spills to CPU), and /gpu keeps a 'kept on the LAN' tally of what local models read instead of the cloud.",
+  "author": { "name": "David Coulson", "url": "https://github.com/davidcoulson" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "ollamaUrl": {
+      "type": "string",
+      "title": "Ollama URL",
+      "description": "Base URL of the Ollama server the local-llm MCP server talks to; read with GET /api/ps only.",
+      "default": "http://10.2.6.50:11434"
+    },
+    "vramGb": {
+      "type": "number",
+      "title": "GPU memory (GB)",
+      "description": "The card's VRAM, for the meter (an RTX 3070 has 8).",
+      "default": 8
+    },
+    "toolPrefix": {
+      "type": "string",
+      "title": "Tool prefix",
+      "description": "Tools whose names start with this light the band.",
+      "default": "mcp__local-llm__"
+    }
+  },
+  "license": "MIT"
+}
