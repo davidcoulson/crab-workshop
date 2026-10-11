@@ -1,0 +1,40 @@
+{
+  "name": "roll-call",
+  "version": "0.1.0",
+  "description": "A status roll-up of your side sessions (/rollcall): each crab holds a sign saying where its session stands, with a 'needs you' lane for sessions waiting on your answer, your OK or your checkbox.",
+  "author": {
+    "name": "David Coulson",
+    "url": "https://github.com/davidcoulson"
+  },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "summarizer": {
+      "type": "string",
+      "title": "Who writes each line",
+      "description": "haiku: a short Claude Haiku call per changed session. local: the local-llm MCP server on your Ollama box (free, stays on the LAN; slower). none: read the last message only.",
+      "options": [
+        "haiku",
+        "local",
+        "none"
+      ],
+      "default": "haiku"
+    },
+    "scope": {
+      "type": "string",
+      "title": "Which sessions",
+      "description": "linked: this session's family (what /crew shows). open: every open session, newest first.",
+      "options": [
+        "linked",
+        "open"
+      ],
+      "default": "linked"
+    },
+    "limit": {
+      "type": "number",
+      "title": "At most this many sessions",
+      "default": 25,
+      "description": "Reads at most this many sessions per roll call (1-60), newest first."
+    }
+  },
+  "license": "MIT"
+}
