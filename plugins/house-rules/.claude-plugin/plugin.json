@@ -1,0 +1,17 @@
+{
+  "name": "house-rules",
+  "version": "0.1.0",
+  "description": "Your homelab conventions as rules on Claude's tool calls: a note, an ask or a refusal when a call breaks one (Unraid appdata paths, CLAUDE.local.md staged, force-push to upstream, HA restarts). /rules lists them with hit counts; /rules add makes your own.",
+  "author": { "name": "David Coulson", "url": "https://github.com/davidcoulson" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "disabled": {
+      "type": "string",
+      "multiple": true,
+      "title": "Built-in rules turned off",
+      "description": "Ids of built-in rules to leave out (appdata-path, claude-local, upstream-force-push, ha-restart).",
+      "default": []
+    }
+  },
+  "license": "MIT"
+}
