@@ -43,4 +43,18 @@ describe('hooks', () => {
     const list = String(((await $.command.run({ command: 'rules', args: '' } as never)) as { text?: string }).text)
     expect(list).toMatch(/claude-local\s+deny\s+1 hits/)
   })
+
+  test('an HA restart is put to you', async ($, on) => {
+    mock.clock(on)
+    mock.store(on, {})
+    on('session.start', () => ({ cwd: '/tmp' }))
+    on('command.register', (_$, e) => ({ value: { command: e.name } }))
+    on('tool.check', () => ({ decision: 'allow' }))
+    await $.session.start({ cwd: '/tmp', surface: 'terminal' } as never)
+    const v = await $.tool.check({ tool: `${HA}ha_restart` } as never)
+    expect(v.decision).toBe('ask')
+    expect(v.reason).toContain('David decides when')
+    const ok = await $.tool.check({ tool: `${HA}ha_get_state`, entity_id: 'light.x' } as never)
+    expect(ok.decision).toBe('allow')
+  })
 })

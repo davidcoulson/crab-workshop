@@ -1,0 +1,76 @@
+{
+  "name": "crab-workshop",
+  "description": "Claude Code mods for a homelab-and-upstream-PRs workflow: crabs, gauges and guards.",
+  "owner": {
+    "name": "David Coulson",
+    "url": "https://github.com/davidcoulson"
+  },
+  "plugins": [
+    {
+      "name": "where-am-i",
+      "source": "./plugins/where-am-i",
+      "description": "Shows which machine and repo a session runs in (Mac or the claude-code container, repo, branch, fork) in the status line, and nudges Claude when it reaches for the container from the Mac or runs a repo's tests on the wrong host.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "roll-call",
+      "source": "./plugins/roll-call",
+      "description": "A status roll-up of your side sessions (/rollcall): each crab holds a sign saying where its session stands, with a 'needs you' lane for sessions waiting on your answer, your OK or your checkbox.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "fuel-gauge",
+      "source": "./plugins/fuel-gauge",
+      "description": "Context and plan-limit meter: context fill, the 5-hour and weekly windows and session cost in the status line, a toast as a window crosses your thresholds, and /fuel for a pane with every running side session's context.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "gpu-crab",
+      "source": "./plugins/gpu-crab",
+      "description": "While a local-llm tool runs on your Ollama box, a crab on a treadmill shows the loaded model, VRAM, GPU/CPU split and elapsed time above the prompt (amber when a model spills to CPU), and /gpu keeps a 'kept on the LAN' tally of what local models read instead of the cloud.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "vitals-strip",
+      "source": "./plugins/vitals-strip",
+      "description": "Unraid and Home Assistant health above the prompt: array and pools, CPU and memory, containers (unhealthy, or stopped though set to autostart), unread Unraid alerts, parity runs, and HA state, repairs and notifications. Quiet by default: it shows only what isn't green. /vitals for the full strip.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "reef",
+      "source": "./plugins/reef",
+      "description": "Your homelab as an aquarium (/reef): every Docker container is a fish coloured by its stack, unhealthy ones float belly-up, the Ollama GPU is a heater that glows while a model is loaded, Home Assistant is a lighthouse that blinks red with repairs, and a crab walks the sand for each side session at work.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "keymaster",
+      "source": "./plugins/keymaster",
+      "description": "Secret tripwire: masks API keys, tokens, passwords and private keys in tool output before Claude, the transcript or your screen sees them, says so in a toast, and counts saves in the status line. /keymaster lists what was masked (kind and place, never the value).",
+      "version": "0.1.0"
+    },
+    {
+      "name": "trailer-guard",
+      "source": "./plugins/trailer-guard",
+      "description": "Per-repo commit attribution policy: refuses a git commit, gh pr create/edit or git push that would carry a Co-Authored-By: Claude trailer or the Generated with Claude Code footer into a repo that forbids them (tinkerologie, esphome, home-assistant upstreams by default), with the lines to remove.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "gatekeeper",
+      "source": "./plugins/gatekeeper",
+      "description": "Your open PRs and what each waits on (/gates): the template boxes only you can tick, CodeRabbit threads and change requests, Codecov, CI, conflicts and drafts ready for you, sorted so what needs you comes first. A band above the prompt counts them; Claude can ask through the gates tool.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "codex-corner",
+      "source": "./plugins/codex-corner",
+      "description": "A boxing ring for Codex adversarial reviews: each review is a round, your crab against the Codex bot, with findings by severity, until the verdict is approve and the bot goes down. Rounds are kept per repo and branch; /codex-card prints the bout.",
+      "version": "0.1.0"
+    },
+    {
+      "name": "house-rules",
+      "source": "./plugins/house-rules",
+      "description": "Your homelab conventions as rules on Claude's tool calls: a note, an ask or a refusal when a call breaks one (Unraid appdata paths, CLAUDE.local.md staged, force-push to upstream, HA restarts). /rules lists them with hit counts; /rules add makes your own.",
+      "version": "0.1.0"
+    }
+  ]
+}
