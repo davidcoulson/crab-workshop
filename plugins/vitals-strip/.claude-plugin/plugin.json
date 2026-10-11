@@ -1,0 +1,34 @@
+{
+  "name": "vitals-strip",
+  "version": "0.1.0",
+  "description": "Unraid and Home Assistant health above the prompt: array and pools, CPU and memory, containers (unhealthy, or stopped though set to autostart), unread Unraid alerts, parity runs, and HA state, repairs and notifications. Quiet by default: it shows only what isn't green. /vitals for the full strip.",
+  "author": { "name": "David Coulson", "url": "https://github.com/davidcoulson" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "unraidServer": {
+      "type": "string",
+      "title": "Unraid MCP server",
+      "description": "The unraid-mcp server's name as /mcp lists it. Read-only calls only.",
+      "default": "plugin:unraid-mcp:unraid-mcp"
+    },
+    "haServer": {
+      "type": "string",
+      "title": "Home Assistant MCP server",
+      "description": "The HA-MCP connector's name as /mcp lists it, or its tool-name spelling (the part between mcp__ and __ha_). Empty leaves HA out.",
+      "default": "9701d7dd-0c3d-4d64-8a88-8109a1430f1b"
+    },
+    "pollSeconds": {
+      "type": "number",
+      "title": "Poll interval (seconds)",
+      "description": "How often to read health; 0 reads only on /vitals.",
+      "default": 120
+    },
+    "quiet": {
+      "type": "boolean",
+      "title": "Quiet",
+      "description": "Show the band only when something isn't green.",
+      "default": true
+    }
+  },
+  "license": "MIT"
+}
