@@ -1,0 +1,28 @@
+{
+  "name": "fuel-gauge",
+  "version": "0.1.0",
+  "description": "Context and plan-limit meter: context fill, the 5-hour and weekly windows and session cost in the status line, a toast as a window crosses your thresholds, and /fuel for a pane with every running side session's context.",
+  "author": { "name": "David Coulson", "url": "https://github.com/davidcoulson" },
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "warnAt": {
+      "type": "number",
+      "title": "Warn at (percent of a plan window)",
+      "description": "A toast when the 5-hour or weekly window crosses this, and again at the second threshold.",
+      "default": 80
+    },
+    "alarmAt": {
+      "type": "number",
+      "title": "Second warning at (percent)",
+      "description": "The second toast for a window.",
+      "default": 95
+    },
+    "contextWarnAt": {
+      "type": "number",
+      "title": "Warn when context passes (percent)",
+      "description": "A toast once when this session's context fill passes this.",
+      "default": 85
+    }
+  },
+  "license": "MIT"
+}
