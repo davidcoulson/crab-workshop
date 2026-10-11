@@ -1,0 +1,16 @@
+{
+  "name": "trailer-guard",
+  "version": "0.1.0",
+  "description": "Per-repo commit attribution policy: refuses a git commit, gh pr create/edit or git push that would carry a Co-Authored-By: Claude trailer or the Generated with Claude Code footer into a repo that forbids them (tinkerologie, esphome, home-assistant upstreams by default), with the lines to remove.",
+  "author": { "name": "David Coulson", "url": "https://github.com/davidcoulson" },
+  "userConfig": {
+    "policy": {
+      "type": "string",
+      "multiple": true,
+      "title": "Policy",
+      "description": "owner/repo-glob=none|allow pairs, first match wins. A checkout is held to none when any of its remotes (origin, upstream) matches a none rule, since a fork's commits travel to its upstream in a PR.",
+      "default": ["tinkerologie/*=none", "esphome/*=none", "home-assistant/*=none", "*=allow"]
+    }
+  },
+  "license": "MIT"
+}
