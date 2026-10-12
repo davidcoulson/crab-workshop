@@ -64,6 +64,14 @@ export function paceText(w: FuelWindow, now: number): string | undefined {
   return parts.join(' · ')
 }
 
+/** The short form for narrow panes: "1.8× · out Wed 05:00", or "0.6× · 20%/day". */
+export function paceShort(w: FuelWindow, now: number): string | undefined {
+  const p = paceOf(w, now)
+  if (!p) return undefined
+  if (w.percentUsed >= 100) return `${p.pace.toFixed(1)}× · limit reached`
+  return `${p.pace.toFixed(1)}× · ${p.runsOutAt !== undefined ? `out ${dayTime(p.runsOutAt)}` : `${Math.round(p.perDay * 10) / 10}%/day`}`
+}
+
 /** The status line: `ctx 14% · 5h 26% (34m) · wk 36% (1.8× · out Mon 12:00)`. */
 export function statusText(r: FuelReading, now: number): string | undefined {
   const parts: string[] = []

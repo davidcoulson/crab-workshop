@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'claude-code/testing'
 
-import { dayTime, dueWarnings, paceOf, paceText, parseUsage, shortName, statusText, until } from '../hooks/logic'
+import { dayTime, dueWarnings, paceOf, paceShort, paceText, parseUsage, shortName, statusText, until } from '../hooks/logic'
 
 // get_usage as the desktop app answers it (2026-10-11).
 const USAGE = JSON.stringify({
@@ -85,6 +85,14 @@ describe('pace', () => {
     expect(p?.perDay).toBe(0)
     expect(paceText(wk(100), now)).toBe('1.4× pace · limit reached')
     expect(paceOf(wk(50), Date.parse(RESET) + 1)).toBeUndefined()
+  })
+  test('the short form fits a narrow pane', () => {
+    const now = START + 2.3 * 24 * H
+    expect(paceShort(wk(60), now)).toMatch(/^1\.8× · out \w{3} \d\d:\d\d$/)
+    expect(paceShort(wk(60), now)?.length).toBeLessThanOrEqual(24)
+    expect(paceShort(wk(30), START + 3.5 * 24 * H)).toBe('0.6× · 20%/day')
+    expect(paceShort(wk(100), START + 5 * 24 * H)).toBe('1.4× · limit reached')
+    expect(paceShort({ kind: 'five_hour', percentUsed: 90, resetsAt: RESET }, now)).toBeUndefined()
   })
   test('one warning per window when pace crosses 1.2', () => {
     const now = START + 2.3 * 24 * H

@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { FleetRow, FuelReading, FuelWindow } from '../types'
-import { bar, compactTokens, dueWarnings, fleetOrder, paceText, parseUsage, shortName, statusText, until } from './logic'
+import { bar, compactTokens, dueWarnings, fleetOrder, paceShort, paceText, parseUsage, shortName, statusText, until } from './logic'
 import { crab } from './shared/crab'
 import { FONT, fit, meter, svg, widthFor, xml } from './shared/draw'
 
@@ -62,7 +62,9 @@ async function refreshFleet($: EngineInterface): Promise<string> {
   try {
     const self = await $.mcp.call(MGMT, 'get_usage', {})
     const mine = parseUsage(textOf(self))
-    if (mine) await update($, reading, r => ({ ...r, windows: mine.windows.length ? mine.windows : r.windows, ...(mine.extra ? { extra: mine.extra } : {}) }))
+    // Stamp the reading with the time of this read, so pace is judged against fresh usage.
+    const readAt = await $.clock.now()
+    if (mine) await update($, reading, r => ({ ...r, windows: mine.windows.length ? mine.windows : r.windows, ...(mine.extra ? { extra: mine.extra } : {}), at: readAt }))
     const listed = await $.mcp.call(MGMT, 'list_sessions', { linked: true, limit: 60 })
     let rows: { sessionId: string; name?: string; title?: string; isRunning?: boolean }[] = []
     try {
@@ -88,7 +90,7 @@ async function refreshFleet($: EngineInterface): Promise<string> {
     await update($, fleet, () => ({ rows: fleetOrder(out), at, isBusy: false }))
     const r = await read($, reading)
     $.ui.status(statusText(r, at))
-    await warn($, r)
+    await warn($, { ...r, at })
     return fleetText(r, fleetOrder(out), at)
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
@@ -151,7 +153,7 @@ function paneSvg(W: number, r: FuelReading, rows: FleetRow[], at: number): { sou
   if (r.contextPercent !== undefined) row('Context', r.contextPercent, `${Math.round(r.contextPercent)}% of ${compactTokens(r.contextWindow)}`, contextWarnAt, 97)
   for (const w of r.windows) {
     row(shortName(w.kind) === '5h' ? '5-hour' : shortName(w.kind) === 'wk' ? 'Weekly' : fit(w.kind, 12, 70), w.percentUsed, `${Math.round(w.percentUsed)}%${w.resetsAt ? ` · ${until(w.resetsAt, at)}` : ''}`)
-    const pace = paceText(w, at)
+    const pace = paceShort(w, at)
     if (pace) row('', undefined, pace)
   }
   if (r.extra && r.extra.limit > 0) row('Extra', (r.extra.spent / r.extra.limit) * 100, `$${r.extra.spent.toFixed(0)} / $${r.extra.limit.toFixed(0)}${r.extra.isEnabled ? '' : ' off'}`)
