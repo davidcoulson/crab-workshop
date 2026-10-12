@@ -20,14 +20,61 @@ export function until(iso: string | undefined, now: number): string {
   return h % 24 ? `${d}d ${h % 24}h` : `${d}d`
 }
 
-/** The status line: `ctx 14% · 5h 26% (34m) · wk 36%`. */
+const DAY_MS = 86_400_000
+const WEEK_MS = 7 * DAY_MS
+/** Pace warning threshold, as a multiple of an even burn. */
+export const PACE_WARN = 1.2
+
+export type Pace = { pace: number; runsOutAt?: number; perDay: number; daysLeft: number }
+
+/**
+ * How fast a weekly window is burning against an even spend. The window starts
+ * 7 days before it resets. Undefined for other windows, or in the first hour
+ * (too noisy), or when the reset has passed.
+ */
+export function paceOf(w: FuelWindow, now: number): Pace | undefined {
+  if (!shortName(w.kind).startsWith('wk') || !w.resetsAt) return undefined
+  const end = Date.parse(w.resetsAt)
+  const elapsed = now - (end - WEEK_MS)
+  if (!Number.isFinite(end) || elapsed < WEEK_MS / 168 || end <= now) return undefined
+  const pace = w.percentUsed / ((elapsed / WEEK_MS) * 100)
+  const left = Math.max(0, 100 - w.percentUsed)
+  const daysLeft = (end - now) / DAY_MS
+  const runsOutAt = pace > 1 && w.percentUsed > 0 ? now + (left * elapsed) / w.percentUsed : undefined
+  return { pace, ...(runsOutAt !== undefined ? { runsOutAt } : {}), perDay: left / daysLeft, daysLeft }
+}
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+/** "Wed 05:00", local time. */
+export function dayTime(ms: number): string {
+  const d = new Date(ms)
+  return `${DAYS[d.getDay()]} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+/** "1.4× pace · runs out Wed 05:00 at this pace · 9%/day left", or undefined for non-weekly windows. */
+export function paceText(w: FuelWindow, now: number): string | undefined {
+  const p = paceOf(w, now)
+  if (!p) return undefined
+  const parts = [`${p.pace.toFixed(1)}× pace`]
+  if (w.percentUsed >= 100) parts.push('limit reached')
+  else {
+    if (p.runsOutAt !== undefined) parts.push(`runs out ${dayTime(p.runsOutAt)} at this pace`)
+    parts.push(`${Math.round(p.perDay * 10) / 10}%/day budget`)
+  }
+  return parts.join(' · ')
+}
+
+/** The status line: `ctx 14% · 5h 26% (34m) · wk 36% (1.8× · out Mon 12:00)`. */
 export function statusText(r: FuelReading, now: number): string | undefined {
   const parts: string[] = []
   if (r.contextPercent !== undefined) parts.push(`ctx ${Math.round(r.contextPercent)}%`)
   for (const w of r.windows) {
     const name = shortName(w.kind)
     const left = name === '5h' ? until(w.resetsAt, now) : ''
-    parts.push(`${name} ${Math.round(w.percentUsed)}%${left ? ` (${left})` : ''}`)
+    const p = paceOf(w, now)
+    const pace = p ? `${p.pace.toFixed(1)}×${p.runsOutAt !== undefined ? ` · ${w.percentUsed >= 100 ? 'out' : `out ${dayTime(p.runsOutAt)}`}` : ''}` : ''
+    const note = left || pace
+    parts.push(`${name} ${Math.round(w.percentUsed)}%${note ? ` (${note})` : ''}`)
   }
   if (r.costUsd !== undefined && r.costUsd >= 0.01) parts.push(`$${r.costUsd.toFixed(2)}`)
   return parts.length ? `⛽ ${parts.join(' · ')}` : undefined
@@ -37,9 +84,14 @@ export function statusText(r: FuelReading, now: number): string | undefined {
  * Which threshold toasts are due: one per window and threshold, keyed by the
  * window's reset time so the next window warns afresh.
  */
-export function dueWarnings(windows: FuelWindow[], thresholds: number[], said: ReadonlySet<string>): { key: string; text: string }[] {
+export function dueWarnings(windows: FuelWindow[], thresholds: number[], said: ReadonlySet<string>, now?: number): { key: string; text: string }[] {
   const out: { key: string; text: string }[] = []
   for (const w of windows) {
+    // Pace: once per window when a weekly window burns faster than PACE_WARN times an even spend.
+    const p = now === undefined ? undefined : paceOf(w, now)
+    const paceKey = `${w.kind}@${w.resetsAt ?? ''}:pace`
+    if (p && p.pace >= PACE_WARN && w.percentUsed < 100 && !said.has(paceKey))
+      out.push({ key: paceKey, text: `${shortName(w.kind) === 'wk' ? 'Weekly' : w.kind} pace ${p.pace.toFixed(1)}×${p.runsOutAt !== undefined ? `: runs out ${dayTime(p.runsOutAt)} at this pace` : ''}, budget ${Math.round(p.perDay * 10) / 10}%/day` })
     const crossed = thresholds.filter(t => w.percentUsed >= t).sort((a, b) => b - a)[0]
     if (crossed === undefined) continue
     const key = `${w.kind}@${w.resetsAt ?? ''}:${crossed}`

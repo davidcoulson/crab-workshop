@@ -2,7 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { FleetRow, FuelReading, FuelWindow } from '../types'
-import { bar, compactTokens, dueWarnings, fleetOrder, parseUsage, shortName, statusText, until } from './logic'
+import { bar, compactTokens, dueWarnings, fleetOrder, paceText, parseUsage, shortName, statusText, until } from './logic'
 import { crab } from './shared/crab'
 import { FONT, fit, meter, svg, widthFor, xml } from './shared/draw'
 
@@ -42,7 +42,7 @@ async function take($: EngineInterface, m: Measured): Promise<void> {
 
 async function warn($: EngineInterface, r: FuelReading): Promise<void> {
   const said = new Set(((await $.store.get(SAID)) as string[] | undefined) ?? [])
-  const due = dueWarnings(r.windows, [warnAt, alarmAt], said)
+  const due = dueWarnings(r.windows, [warnAt, alarmAt], said, r.at)
   const id = await $.session.id()
   const ctxKey = `ctx:${id}`
   if (r.contextPercent !== undefined && r.contextPercent >= contextWarnAt && !said.has(ctxKey))
@@ -99,7 +99,11 @@ async function refreshFleet($: EngineInterface): Promise<string> {
 
 function fleetText(r: FuelReading, rows: FleetRow[], at: number): string {
   const lines = [statusText(r, at) ?? 'No readings yet.']
-  for (const w of r.windows) lines.push(`  ${shortName(w.kind).padEnd(10)} ${bar(w.percentUsed)} ${Math.round(w.percentUsed)}%${w.resetsAt ? `, resets in ${until(w.resetsAt, at)}` : ''}`)
+  for (const w of r.windows) {
+    lines.push(`  ${shortName(w.kind).padEnd(10)} ${bar(w.percentUsed)} ${Math.round(w.percentUsed)}%${w.resetsAt ? `, resets in ${until(w.resetsAt, at)}` : ''}`)
+    const pace = paceText(w, at)
+    if (pace) lines.push(`  ${''.padEnd(10)} ${pace}`)
+  }
   if (r.extra) lines.push(`  extra      ${r.extra.currency === 'USD' ? '$' : ''}${r.extra.spent.toFixed(2)} of ${r.extra.limit.toFixed(0)}${r.extra.isEnabled ? '' : ' (off)'}`)
   if (rows.length) {
     lines.push('Running sessions, by context:')
@@ -145,7 +149,11 @@ function paneSvg(W: number, r: FuelReading, rows: FleetRow[], at: number): { sou
     y += 20
   }
   if (r.contextPercent !== undefined) row('Context', r.contextPercent, `${Math.round(r.contextPercent)}% of ${compactTokens(r.contextWindow)}`, contextWarnAt, 97)
-  for (const w of r.windows) row(shortName(w.kind) === '5h' ? '5-hour' : shortName(w.kind) === 'wk' ? 'Weekly' : fit(w.kind, 12, 70), w.percentUsed, `${Math.round(w.percentUsed)}%${w.resetsAt ? ` · ${until(w.resetsAt, at)}` : ''}`)
+  for (const w of r.windows) {
+    row(shortName(w.kind) === '5h' ? '5-hour' : shortName(w.kind) === 'wk' ? 'Weekly' : fit(w.kind, 12, 70), w.percentUsed, `${Math.round(w.percentUsed)}%${w.resetsAt ? ` · ${until(w.resetsAt, at)}` : ''}`)
+    const pace = paceText(w, at)
+    if (pace) row('', undefined, pace)
+  }
   if (r.extra && r.extra.limit > 0) row('Extra', (r.extra.spent / r.extra.limit) * 100, `$${r.extra.spent.toFixed(0)} / $${r.extra.limit.toFixed(0)}${r.extra.isEnabled ? '' : ' off'}`)
   if (r.costUsd !== undefined) row('Session', undefined, `$${r.costUsd.toFixed(2)}`)
   y = Math.max(y, 48) + 6
