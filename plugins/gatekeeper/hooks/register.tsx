@@ -4,6 +4,8 @@ import type { EngineInterface, Register } from 'claude-code'
 import type { Gate, Gates, Lane } from '../types'
 import { QUERY, asText, bandText, chips, counts, parseGates, parseReadyLimits } from './gates'
 import type { ReadyLimits } from './gates'
+import { isRateLimited, parseShared, plan } from './cache'
+import type { SharedRead } from './cache'
 import { crab } from './shared/crab'
 import { FONT, ago, svg, widthFor, xml } from './shared/draw'
 
@@ -16,31 +18,93 @@ const TITLE = 'Gates'
 let query = 'is:pr is:open author:@me archived:false sort:updated-desc'
 let readyLimits: ReadyLimits = { tinkerologie: 2 }
 let yours: string[] = []
-let pollMs = 300_000
+let pollMs = 900_000
 let fetching: Promise<string> | null = null
+let sharedPath: string | null = null
 let soon: { cancel: () => void } | null = null
 
-function refresh($: EngineInterface): Promise<string> {
+function refresh($: EngineInterface, force = false): Promise<string> {
   if (!fetching)
-    fetching = refreshNow($).finally(() => {
+    fetching = refreshNow($, force).finally(() => {
       fetching = null
     })
   return fetching
 }
 
-async function refreshNow($: EngineInterface): Promise<string> {
+/** ~/.cache/crab-workshop/gatekeeper.json: the read every session shares. */
+async function pathOfShared($: EngineInterface): Promise<string | null> {
+  if (sharedPath) return sharedPath
+  const r = await $.process.run(['sh', '-c', 'printf %s "$HOME"'], { timeoutMs: 5_000 })
+  const home = r.exitCode === 0 ? r.stdout.trim() : ''
+  sharedPath = home ? `${home}/.cache/crab-workshop/gatekeeper.json` : null
+  return sharedPath
+}
+
+async function readShared($: EngineInterface, path: string | null): Promise<SharedRead> {
+  if (!path) return {}
+  try {
+    return (await $.fs.exists(path)) ? parseShared(await $.fs.read(path)) : {}
+  } catch {
+    return {}
+  }
+}
+
+async function writeShared($: EngineInterface, path: string | null, v: SharedRead): Promise<void> {
+  if (!path) return
+  try {
+    await $.fs.write(path, JSON.stringify(v))
+  } catch {
+    // A session that can't write just doesn't share; it still works.
+  }
+}
+
+async function show($: EngineInterface, v: SharedRead, error?: string): Promise<string> {
+  const list = v.gates ?? []
+  await update($, gates, g => ({ gates: list, total: v.total ?? list.length, at: v.at ?? g.at, isBusy: false, ...(error ? { error } : {}) }))
+  if (v.at) await update($, now, () => Math.max(v.at ?? 0, Date.now()))
+  $.ui.status(bandText(list))
+  return error ? `${error}${list.length ? `\n\n${asText(list, v.total ?? list.length)}` : ''}` : asText(list, v.total ?? list.length)
+}
+
+async function refreshNow($: EngineInterface, force: boolean): Promise<string> {
+  const path = await pathOfShared($)
+  const shared = await readShared($, path)
+  const at0 = await $.clock.now()
+  const p = plan(shared, at0, pollMs, force)
+  if (p.kind === 'reuse') {
+    const error = p.why === 'rate limited' ? `GitHub rate limit spent; next read after ${new Date(shared.backoffUntil ?? 0).toLocaleTimeString()}` : undefined
+    if (shared.at || error) return show($, shared, error)
+    // Nothing shared yet and another session is reading: wait for it next time.
+    return show($, shared)
+  }
   await update($, gates, g => ({ ...g, isBusy: true }))
+  await writeShared($, path, { ...shared, fetchingSince: at0 })
   try {
     const r = await $.process.run(['gh', 'api', 'graphql', '-f', `query=${QUERY}`, '-f', `q=${query}`], { timeoutMs: 60_000 })
     const parsed = r.exitCode === 0 ? parseGates(r.stdout, yours, readyLimits) : null
-    if (!parsed) throw new Error((r.stderr || r.stdout).trim().slice(0, 160) || `gh exited ${r.exitCode}`)
+    if (!parsed) {
+      const why = (r.stderr || r.stdout).trim()
+      if (isRateLimited(why)) {
+        // The rate_limit endpoint itself doesn't count against the limit.
+        const reset = await $.process.run(['gh', 'api', 'rate_limit', '--jq', '.resources.graphql.reset'], { timeoutMs: 15_000 })
+        const until = Number(reset.stdout.trim()) * 1000
+        const backoffUntil = Number.isFinite(until) && until > at0 ? until : at0 + 15 * 60_000
+        const next: SharedRead = { ...shared, backoffUntil }
+        delete next.fetchingSince
+        await writeShared($, path, next)
+        return show($, next, `GitHub rate limit spent; next read after ${new Date(backoffUntil).toLocaleTimeString()}`)
+      }
+      throw new Error(why.slice(0, 160) || `gh exited ${r.exitCode}`)
+    }
     const at = await $.clock.now()
-    await update($, gates, () => ({ gates: parsed.gates, total: parsed.total, at, isBusy: false }))
-    await update($, now, () => at)
-    $.ui.status(bandText(parsed.gates))
-    return asText(parsed.gates, parsed.total)
+    const next: SharedRead = { at, gates: parsed.gates, total: parsed.total }
+    await writeShared($, path, next)
+    return show($, next)
   } catch (err) {
     const error = (err instanceof Error ? err.message : String(err)).slice(0, 200)
+    const next: SharedRead = { ...shared }
+    delete next.fetchingSince
+    await writeShared($, path, next)
     await update($, gates, g => ({ ...g, isBusy: false, error }))
     return `Couldn't read your PRs: ${error}`
   }
@@ -49,7 +113,7 @@ async function refreshNow($: EngineInterface): Promise<string> {
 /** A refresh a little after a push or a gh pr command, once CI and CodeRabbit have had a moment. */
 function refreshSoon($: EngineInterface): void {
   soon?.cancel()
-  soon = $.clock.after(20_000, () => void refresh($))
+  soon = $.clock.after(20_000, () => void refresh($, true))
 }
 
 async function togglePane($: EngineInterface): Promise<boolean> {
@@ -83,7 +147,7 @@ export const register: Register = (on, options) => {
   query = String(options.query ?? query)
   if (typeof options.readyLimits === 'string') readyLimits = parseReadyLimits(options.readyLimits)
   yours = ((options.yourBoxes as readonly string[] | undefined) ?? []).map(String)
-  pollMs = Math.max(0, Number(options.pollMinutes ?? 5)) * 60_000
+  pollMs = Math.max(0, Number(options.pollMinutes ?? 15)) * 60_000
 
   on('session.start', async ($, e, next) => {
     const started = await next(e)
@@ -116,7 +180,7 @@ export const register: Register = (on, options) => {
   })
 
   on('command.run', { command: 'gates' }, async ($, e) => {
-    if (/\btext\b/.test(e.args)) return { text: await refresh($) }
+    if (/\btext\b/.test(e.args)) return { text: await refresh($, true) }
     const isOpen = await togglePane($)
     if (isOpen) $.clock.after(0, () => void refresh($))
     return { text: isOpen ? 'Gates opened.' : 'Gates closed.' }
@@ -143,7 +207,7 @@ export const register: Register = (on, options) => {
           <Text dimColor>
             {v.isBusy ? 'Reading GitHub…' : v.at ? `${v.gates.length}${v.total > v.gates.length ? ` of ${v.total}` : ''} open PRs · as of ${ago(at - v.at)}` : 'Not read yet.'}
           </Text>
-          <Button key="refresh" label="Refresh" plain onPress={() => void refresh($)} />
+          <Button key="refresh" label="Refresh" plain onPress={() => void refresh($, true)} />
         </Box>
         {v.error ? <Text color="red">{v.error}</Text> : null}
         {lanes.map(([lane, list]) => (

@@ -38,8 +38,8 @@
     "pollMinutes": {
       "type": "number",
       "title": "Refresh every (minutes)",
-      "description": "Also refreshed shortly after a git push or a gh pr command; 0 refreshes only then and on /gates.",
-      "default": 5
+      "description": "How often to read GitHub. Every session shares one read (~/.cache/crab-workshop/gatekeeper.json), so this is how often GitHub is asked at all, not per session; 0 reads only on /gates.",
+      "default": 15
     },
     "readyLimits": {
       "type": "string",
