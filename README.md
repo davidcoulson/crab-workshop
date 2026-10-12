@@ -29,7 +29,8 @@ Everything is read-only.
 | Mod | Reads |
 | --- | --- |
 | roll-call, fuel-gauge, reef | The desktop app's session server (`ccd_session_mgmt`: `list_sessions`, `list_events`, `get_usage`) |
-| vitals-strip, reef | `unraid-mcp` (`system array/metrics`, `docker list`, `notification overview`, `array parity_status`) and the HA-MCP connector (`ha_get_overview`) |
+| vitals-strip | The HA-MCP connector: one `ha_eval_template` over the Unraid Management Agent integration's entities, and `ha_get_overview`. Allow both tools in permissions so auto mode doesn't review each read |
+| reef | `unraid-mcp` (`system array/metrics`, `docker list`, `notification overview`, `array parity_status`) and the HA-MCP connector (`ha_get_overview`) |
 | gpu-crab, reef | Ollama `GET /api/ps` at `10.2.6.50:11434` |
 | gatekeeper | `gh api graphql`, one search query every 5 minutes and shortly after a push |
 | where-am-i, trailer-guard, codex-corner | `git` in the session's checkout |

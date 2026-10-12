@@ -87,6 +87,72 @@ export function haChip(r: Record<string, unknown>): Chip {
   return { key: 'ha', level, text: parts.join(' · '), detail: `Home Assistant ${sys.version ?? '?'} ${sys.state ?? '?'}: ${repairs} repairs, ${notes} notifications` }
 }
 
+/**
+ * One HA template that reads the Unraid Management Agent integration's
+ * entities into the shapes the chips above take, plus the integration's
+ * problem sensors. Read-only, one call, instead of five unraid-mcp calls.
+ */
+export const HA_VITALS_TEMPLATE = `{%- set ents = integration_entities('unraid_management_agent') -%}
+{%- set one = namespace(cpu=none, ram=none, arr=none, par=none, info=none, warn=none, alert=none, docker=none) -%}
+{%- for e in ents -%}
+{%- if e is match('sensor\\..*unraid_cpu_usage$') -%}{%- set one.cpu = e -%}
+{%- elif e is match('sensor\\..*unraid_ram_usage$') -%}{%- set one.ram = e -%}
+{%- elif e is match('binary_sensor\\..*unraid_array_started$') -%}{%- set one.arr = e -%}
+{%- elif e is match('sensor\\..*unraid_parity_check_progress$') -%}{%- set one.par = e -%}
+{%- elif e is match('sensor\\..*unraid_notifications_unread_info$') -%}{%- set one.info = e -%}
+{%- elif e is match('sensor\\..*unraid_notifications_unread_warning$') -%}{%- set one.warn = e -%}
+{%- elif e is match('sensor\\..*unraid_notifications_unread_alert$') -%}{%- set one.alert = e -%}
+{%- elif e is match('binary_sensor\\..*unraid_docker_service$') -%}{%- set one.docker = e -%}
+{%- endif -%}
+{%- endfor -%}
+{%- set pools = ents | select('match', 'sensor\\..*unraid_zfs_pool_.*_health$') | list -%}
+{%- set health = pools | map('states') | list -%}
+{%- set failed = health | select('in', ['FAULTED', 'UNAVAIL', 'REMOVED', 'OFFLINE']) | list | count -%}
+{%- set degraded = health | reject('in', ['ONLINE', 'FAULTED', 'UNAVAIL', 'REMOVED', 'OFFLINE', 'unknown', 'unavailable']) | list | count -%}
+{%- set probs = namespace(l=[]) -%}
+{%- for e in ents if e.startswith('binary_sensor.') and is_state(e, 'on') and state_attr(e, 'device_class') == 'problem' -%}
+{%- set probs.l = probs.l + [state_attr(e, 'friendly_name') or e] -%}
+{%- endfor -%}
+{%- set p = states(one.par) | float(0) if one.par else 0 -%}
+{%- set i = states(one.info) | int(0) if one.info else 0 -%}
+{%- set w = states(one.warn) | int(0) if one.warn else 0 -%}
+{%- set a = states(one.alert) | int(0) if one.alert else 0 -%}
+{{ {
+  'found': ents | count,
+  'array': {'summary': {'state': ('STARTED' if is_state(one.arr, 'on') else 'STOPPED') if one.arr else none,
+    'overall_health': 'HEALTHY' if failed + degraded == 0 else 'DEGRADED',
+    'num_cache_pools': pools | count,
+    'health_summary': {'pools': {'failed': failed, 'warning': degraded}}}},
+  'metrics': {'cpu': {'percentTotal': states(one.cpu) | float(none) if one.cpu else none},
+    'memory': {'percentTotal': states(one.ram) | float(none) if one.ram else none}},
+  'notes': {'unread': {'info': i, 'warning': w, 'alert': a, 'total': i + w + a}},
+  'parity': {'data': {'running': 0 < p < 100, 'progress': p, 'errors': 0}},
+  'docker': (is_state(one.docker, 'on') if one.docker else none),
+  'problems': probs.l
+} | to_json }}`
+
+/** The template's JSON: ha_eval_template answers `{result: "<json>"}` or the parsed object. */
+export function haVitalsOf(text: string): Record<string, unknown> | null {
+  try {
+    const v = JSON.parse(text) as Record<string, unknown>
+    if (v && typeof v === 'object' && v.success === false) return null
+    let r: unknown = v && typeof v === 'object' && 'result' in v ? v.result : v
+    if (typeof r === 'string') r = JSON.parse(r)
+    return r && typeof r === 'object' ? (r as Record<string, unknown>) : null
+  } catch {
+    return null
+  }
+}
+
+/** Docker service down, or problem sensors from the integration that are on (shelves, HBAs, optics, pools). */
+export function problemsChip(r: Record<string, unknown>): Chip | null {
+  const problems = (Array.isArray(r.problems) ? r.problems : []).map(String)
+  const dockerDown = r.docker === false
+  if (!problems.length && !dockerDown) return null
+  const parts = [dockerDown ? '🐳 docker down' : '', problems.length ? `⚠ ${problems.slice(0, 2).join(', ')}${problems.length > 2 ? ` +${problems.length - 2}` : ''}` : ''].filter(Boolean)
+  return { key: 'problems', level: 'bad', text: parts.join(' · '), detail: `${dockerDown ? 'Docker service is not running. ' : ''}${problems.length ? `Problem sensors on: ${problems.join(', ')}` : ''}`.trim() }
+}
+
 const RANK: Record<ChipLevel, number> = { bad: 0, warn: 1, info: 2, ok: 3 }
 export const byLevel = (chips: Chip[]): Chip[] => [...chips].sort((a, b) => RANK[a.level] - RANK[b.level])
 export const worst = (chips: Chip[]): ChipLevel => byLevel(chips)[0]?.level ?? 'ok'

@@ -2,13 +2,12 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Chip, ChipLevel, Vitals } from '../types'
-import { arrayChip, byLevel, dockerChip, haChip, metricsChip, notificationChip, parityChip, resultOf, shown, statusLine, worst } from './logic'
+import { arrayChip, byLevel, HA_VITALS_TEMPLATE, haChip, haVitalsOf, metricsChip, notificationChip, parityChip, problemsChip, resultOf, shown, statusLine, worst } from './logic'
 import { crab } from './shared/crab'
 import { FONT, svg, widthFor, xml } from './shared/draw'
 
 const vitals = atom({ plugin: 'vitals-strip', key: 'vitals' } as const, { chips: [], at: 0, errors: [], isAlwaysShown: false })
 
-let unraidServer = 'plugin:unraid-mcp:unraid-mcp'
 let haServer = '9701d7dd-0c3d-4d64-8a88-8109a1430f1b'
 let pollMs = 120_000
 let quiet = true
@@ -18,12 +17,18 @@ const textOf = (r: { content: readonly unknown[] }): string =>
   r.content.map(b => (b && typeof b === 'object' && 'text' in b && typeof b.text === 'string' ? b.text : '')).join('')
 
 /** One read-only MCP call, its JSON result, or why not. */
-async function ask($: EngineInterface, server: string, tool: string, args: Record<string, unknown>): Promise<Record<string, unknown> | string> {
+async function ask(
+  $: EngineInterface,
+  server: string,
+  tool: string,
+  args: Record<string, unknown>,
+  parse: (text: string) => Record<string, unknown> | null = resultOf,
+): Promise<Record<string, unknown> | string> {
   try {
     const r = await $.mcp.call(server, tool, args)
     const text = textOf(r)
     if (r.isError) return text.slice(0, 120) || 'error'
-    return resultOf(text) ?? 'not JSON'
+    return parse(text) ?? 'not JSON'
   } catch (err) {
     return (err instanceof Error ? err.message : String(err)).slice(0, 120)
   }
@@ -38,15 +43,17 @@ function readVitals($: EngineInterface): Promise<string> {
 }
 
 async function readNow($: EngineInterface): Promise<string> {
-  const u = (subaction: string, action = 'system', extra: Record<string, unknown> = {}) => ask($, unraidServer, 'unraid', { action, subaction, ...extra })
-  const [arr, metrics, docker, notes, parity, ha] = await Promise.all([
-    u('array'),
-    u('metrics'),
-    u('list', 'docker', { limit: 0 }),
-    u('overview', 'notification'),
-    u('parity_status', 'array'),
-    haServer ? ask($, haServer, 'ha_get_overview', { fields: ['system_info', 'notification_count', 'repair_count'] }) : Promise.resolve(null),
-  ])
+  // Unraid comes from the Unraid Management Agent integration's entities in
+  // HA: one read-only template call, not five unraid-mcp calls (auto mode
+  // reviews each MCP call a mod makes, and the unraid tool can also write).
+  const [unraid, ha] = haServer
+    ? await Promise.all([
+        ask($, haServer, 'ha_eval_template', { template: HA_VITALS_TEMPLATE, report_errors: false, timeout: 10 }, haVitalsOf),
+        ask($, haServer, 'ha_get_overview', { fields: ['system_info', 'notification_count', 'repair_count'] }),
+      ])
+    : [null, null]
+  const part = (key: string) => (r: Record<string, unknown> | string | null): Record<string, unknown> | string | null =>
+    r === null || typeof r === 'string' ? r : Number(r.found ?? 0) === 0 ? 'no Unraid Management Agent entities in HA' : ((r[key] as Record<string, unknown> | undefined) ?? null)
   const chips: Chip[] = []
   const errors: string[] = []
   const add = (name: string, r: Record<string, unknown> | string | null, make: (r: Record<string, unknown>) => Chip | null) => {
@@ -57,11 +64,13 @@ async function readNow($: EngineInterface): Promise<string> {
       if (c) chips.push(c)
     }
   }
-  add('array', arr, arrayChip)
-  add('load', metrics, metricsChip)
-  add('docker', docker, dockerChip)
-  add('notifications', notes, notificationChip)
-  add('parity', parity, parityChip)
+  add('unraid', part('array')(unraid), arrayChip)
+  if (unraid && typeof unraid !== 'string' && Number(unraid.found ?? 0) > 0) {
+    add('load', part('metrics')(unraid), metricsChip)
+    add('notifications', part('notes')(unraid), notificationChip)
+    add('parity', part('parity')(unraid), parityChip)
+    add('problems', unraid, problemsChip)
+  }
   add('home assistant', ha, haChip)
   const at = await $.clock.now()
   const prev = await read($, vitals)
@@ -109,7 +118,6 @@ function stripSvg(W: number, chips: Chip[]): { source: string; height: number } 
 }
 
 export const register: Register = (on, options) => {
-  unraidServer = String(options.unraidServer ?? unraidServer)
   haServer = String(options.haServer ?? haServer)
   pollMs = Math.max(0, Number(options.pollSeconds ?? 120)) * 1000
   quiet = options.quiet !== false
