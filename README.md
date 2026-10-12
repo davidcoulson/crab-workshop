@@ -3,7 +3,7 @@
 Eleven Claude Code mods (function-hook plugins) built around one workflow: many parallel side
 sessions, upstream PRs behind CodeRabbit, Codecov and Codex reviews, an Unraid server with about 90
 containers, Home Assistant, and a local LLM on an RTX 3070. They are siblings of
-[session-crew](../session-crew) and borrow its savvy-progress crabs.
+[session-crew](https://github.com/davidcoulson/session-crew) and borrow its savvy-progress crabs.
 
 The mod API is early access. These mods were built and tested against Claude Code 2.1.295 (the
 desktop app's CLI); the declaration file that version ships is the authority.
@@ -31,11 +31,22 @@ Everything is read-only.
 | roll-call, fuel-gauge, reef | The desktop app's session server (`ccd_session_mgmt`: `list_sessions`, `list_events`, `get_usage`) |
 | vitals-strip | The HA-MCP connector: one `ha_eval_template` over the Unraid Management Agent integration's entities, and `ha_get_overview`. Allow both tools in permissions so auto mode doesn't review each read |
 | reef | `unraid-mcp` (`system array/metrics`, `docker list`, `notification overview`, `array parity_status`) and the HA-MCP connector (`ha_get_overview`) |
-| gpu-crab, reef | Ollama `GET /api/ps` at `10.2.6.50:11434` |
+| gpu-crab, reef | Ollama `GET /api/ps` at the `ollamaUrl` option (default `http://localhost:11434`) |
 | gatekeeper | `gh api graphql`, one search query every 5 minutes and shortly after a push |
 | where-am-i, trailer-guard, codex-corner | `git` in the session's checkout |
 
-Server names, URLs and thresholds are options (`userConfig`) on each mod.
+Server names, URLs and thresholds are options (`userConfig`) on each mod. The defaults assume nothing
+about your network: Ollama on `localhost`, no Home Assistant connector (vitals-strip and reef's
+lighthouse stay off until you name one), and no repo or SSH rules for where-am-i. Set your values in
+`~/.claude/settings.json`:
+
+```json
+"pluginConfigs": {
+  "gpu-crab": { "options": { "ollamaUrl": "http://192.168.1.50:11434" } },
+  "vitals-strip": { "options": { "haServer": "<your HA-MCP connector, as /mcp lists it>" } },
+  "where-am-i": { "options": { "homes": ["my-integration=container"], "containerTargets": ["my-nas"] } }
+}
+```
 
 ## Trying them
 
@@ -50,7 +61,7 @@ For desktop-app sessions, add the folders to `CLAUDE_CODE_PLUGIN_DIRS` in `~/.cl
 
 ```json
 "env": {
-  "CLAUDE_CODE_PLUGIN_DIRS": "/Users/david/dev/session-crew:/Users/david/dev/crab-workshop/plugins/where-am-i:/Users/david/dev/crab-workshop/plugins/keymaster"
+  "CLAUDE_CODE_PLUGIN_DIRS": "/path/to/session-crew:/path/to/crab-workshop/plugins/where-am-i:/path/to/crab-workshop/plugins/keymaster"
 }
 ```
 
@@ -84,3 +95,8 @@ THIRD_PARTY_NOTICES.md) and the drawing helpers. `scripts/sync-shared.sh` copies
 - keymaster masks what looks like a secret. A real value that slips past its patterns is not caught,
   and a fake one in a test fixture is masked until you `/keymaster allow` its tag.
 - gatekeeper reads the first 50 PRs of its search (newest first).
+
+## License
+
+MIT, see [LICENSE](LICENSE). The crab art is third-party; see
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

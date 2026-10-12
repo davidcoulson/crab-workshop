@@ -1,5 +1,6 @@
 savvy-progress (https://github.com/JohnnyVizz/claude-kit/tree/main/plugins/savvy-progress)
-Source of the crab art and motion in hooks/crab.ts, copied from plugins/savvy-progress/hooks/register.tsx
+Source of the crab art and motion in shared/crab.ts (and its copies in plugins/*/hooks/shared/crab.ts),
+copied through session-crew from plugins/savvy-progress/hooks/register.tsx
 at claude-kit commit 272a877f39b6971690e087b16a7cc3951b811e39. savvy-progress credits the pixel crab
 to DockCrab (Clawdy); that project's own license was not found.
 

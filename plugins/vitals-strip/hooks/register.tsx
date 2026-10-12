@@ -8,7 +8,7 @@ import { FONT, svg, widthFor, xml } from './shared/draw'
 
 const vitals = atom({ plugin: 'vitals-strip', key: 'vitals' } as const, { chips: [], at: 0, errors: [], isAlwaysShown: false })
 
-let haServer = '9701d7dd-0c3d-4d64-8a88-8109a1430f1b'
+let haServer = ''
 let pollMs = 120_000
 let quiet = true
 let reading: Promise<string> | null = null

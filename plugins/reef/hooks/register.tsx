@@ -12,8 +12,8 @@ const PANE = 'reef'
 const TITLE = 'Reef'
 
 let unraidServer = 'plugin:unraid-mcp:unraid-mcp'
-let haServer = '9701d7dd-0c3d-4d64-8a88-8109a1430f1b'
-let ollamaUrl = 'http://10.2.6.50:11434'
+let haServer = ''
+let ollamaUrl = 'http://localhost:11434'
 let swimmers = 24
 let filling: Promise<string> | null = null
 

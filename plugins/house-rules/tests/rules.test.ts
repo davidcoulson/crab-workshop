@@ -3,7 +3,7 @@ import { describe, expect, mock, test } from 'claude-code/testing'
 import { BUILT_IN, broken, parseAdd } from '../hooks/rules'
 
 const ids = (tool: string, input: Record<string, unknown>) => broken(BUILT_IN, tool, input).map(r => r.id)
-const HA = 'mcp__9701d7dd-0c3d-4d64-8a88-8109a1430f1b__'
+const HA = 'mcp__00000000-0000-4000-8000-000000000000__'
 
 describe('rules', () => {
   test('built-ins catch what went wrong before', () => {

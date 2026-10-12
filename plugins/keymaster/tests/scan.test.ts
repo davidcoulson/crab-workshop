@@ -11,12 +11,12 @@ describe('detects', () => {
     expect(kinds('<Config><ApiKey>0123456789abcdef0123456789abcdef</ApiKey></Config>')).toEqual(['arr-api-key'])
     expect(kinds('RADARR_API_KEY=0123456789abcdef0123456789abcdef')).toEqual(['assigned-secret'])
     expect(kinds('"apikey": "fedcba9876543210fedcba9876543210"')).toEqual(['assigned-secret'])
-    expect(kinds('http://10.2.6.88:7878/api/v3/movie?apikey=0123456789abcdef0123456789abcdef&x=1')).toEqual(['assigned-secret'])
+    expect(kinds('http://192.0.2.88:7878/api/v3/movie?apikey=0123456789abcdef0123456789abcdef&x=1')).toEqual(['assigned-secret'])
     // An HA long-lived token is a JWT.
     expect(kinds('Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJhYmMxMjM0NTYifQ.c2lnbmF0dXJlLXZhbHVlLWhlcmU')).toEqual(['jwt'])
     // ESPHome api encryption key and OTA password.
     expect(kinds('api:\n  encryption:\n    key: "aGVsbG8td29ybGQtdGhpcy1pcy1hLXRlc3Qta2V5LTEyMz0="\nota:\n  password: "hunter2hunter2"')).toEqual(['esphome-key', 'assigned-secret'])
-    expect(kinds('mqtt://homeassistant:s3cretpass@10.2.3.6:1883')).toEqual(['url-password'])
+    expect(kinds('mqtt://homeassistant:s3cretpass@192.0.2.6:1883')).toEqual(['url-password'])
     expect(kinds('token ghp_abcdefghijklmnopqrstuvwxyz0123456789AB')).toEqual(['github-token'])
     expect(kinds('-----BEGIN OPENSSH PRIVATE KEY-----\nb3BlbnNzaC1rZXktdjEAAAAABG5vbmU=\n-----END OPENSSH PRIVATE KEY-----')).toEqual(['private-key'])
   })

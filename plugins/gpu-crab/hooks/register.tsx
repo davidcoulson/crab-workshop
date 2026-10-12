@@ -15,7 +15,7 @@ const STORE_TALLY = 'gpu-crab.tally'
 // How long the band stays after a call ends.
 const LINGER_MS = 20_000
 
-let ollamaUrl = 'http://10.2.6.50:11434'
+let ollamaUrl = 'http://localhost:11434'
 let vramGb = 8
 let prefix = 'mcp__local-llm__'
 let poller: { cancel: () => void } | null = null

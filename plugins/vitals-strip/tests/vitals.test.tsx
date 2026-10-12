@@ -53,7 +53,7 @@ describe('chips', () => {
 })
 
 describe('hooks', () => {
-  test('/vitals reads Unraid through one HA template call; the band draws what is not green', async ($, on) => {
+  test('/vitals reads Unraid through one HA template call; the band draws what is not green', { options: { haServer: 'home-assistant' } }, async ($, on) => {
     mock.clock(on)
     mock.store(on, {})
     on('session.start', () => ({ cwd: '/tmp' }))

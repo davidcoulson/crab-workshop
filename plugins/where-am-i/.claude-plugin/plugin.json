@@ -15,22 +15,15 @@
       "type": "string",
       "multiple": true,
       "title": "Where each repo's dev work runs",
-      "description": "repo-glob=mac|container pairs. Running a build or test of a matching repo on the other kind of host adds a note for Claude.",
-      "default": [
-        "ha-unraid-management-agent=container",
-        "unraid-management-agent=container",
-        "ha-ollama-monitor=container",
-        "unraid-storage-topology=container",
-        "local-llm-mcp=container",
-        "claude-code-container=container"
-      ]
+      "description": "repo-glob=mac|container pairs. Running a build or test of a matching repo on the other kind of host adds a note for Claude. Example: my-integration=container, my-app-*=mac.",
+      "default": []
     },
     "containerTargets": {
       "type": "string",
       "multiple": true,
       "title": "SSH targets that mean the dev container or Unraid host",
-      "description": "Words that, after ssh/scp/rsync on the Mac, mean work that belongs in an UnRAID SSH session instead.",
-      "default": ["unraid", "claude-code", "10.2.3.4", "10.2.6.51"]
+      "description": "Words that, after ssh/scp/rsync on the Mac, mean work that belongs in an SSH session on that host instead. Example: my-nas, dev-box, 192.168.1.20.",
+      "default": []
     }
   },
   "license": "MIT"

@@ -12,7 +12,7 @@
       "type": "string",
       "title": "Home Assistant MCP server",
       "description": "The HA-MCP connector's name as /mcp lists it, or its tool-name spelling (the part between mcp__ and __ha_). Both Unraid and HA are read through it; allow its ha_eval_template and ha_get_overview tools in permissions so auto mode doesn't review each read. Empty turns the strip off.",
-      "default": "9701d7dd-0c3d-4d64-8a88-8109a1430f1b"
+      "default": ""
     },
     "pollSeconds": {
       "type": "number",

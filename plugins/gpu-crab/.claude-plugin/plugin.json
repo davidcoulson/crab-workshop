@@ -9,7 +9,7 @@
       "type": "string",
       "title": "Ollama URL",
       "description": "Base URL of the Ollama server the local-llm MCP server talks to; read with GET /api/ps only.",
-      "default": "http://10.2.6.50:11434"
+      "default": "http://localhost:11434"
     },
     "vramGb": {
       "type": "number",

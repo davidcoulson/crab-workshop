@@ -33,7 +33,7 @@ const round = (verdict: Round['verdict']): Round => ({ verdict, findings: { crit
 
 describe('bout', () => {
   test('spotting runs', () => {
-    expect(reviewKind('node "/Users/david/.claude/plugins/cache/openai-codex/codex/1.0.6/scripts/codex-companion.mjs" adversarial-review --wait --base upstream/main "focus"')).toBe('adversarial-review')
+    expect(reviewKind('node "/Users/me/.claude/plugins/cache/openai-codex/codex/1.0.6/scripts/codex-companion.mjs" adversarial-review --wait --base upstream/main "focus"')).toBe('adversarial-review')
     expect(reviewKind('node ~/x/codex-companion.mjs result')).toBe('result')
     expect(reviewKind('git status')).toBe(null)
   })

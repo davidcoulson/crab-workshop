@@ -4,12 +4,12 @@ import { describe, homeFor, hostKind, hostLabel, isDevCommand, movesCheckout, nu
 import type { Place } from '../hooks/place'
 
 const HOMES = parseRules(['ha-unraid-management-agent=container', 'unraid-*=container', 'kiosk-*=mac'])
-const TARGETS = ['unraid', 'claude-code', '10.2.3.4', '10.2.6.51']
+const TARGETS = ['unraid', 'claude-code', '192.0.2.4', '192.0.2.51']
 const MAC: Place = {
   kind: 'mac',
   host: 'Davids-MacBook-Pro.local',
   label: '🍎 Mac',
-  cwd: '/Users/david/dev/ha-unraid-management-agent',
+  cwd: '/Users/me/dev/ha-unraid-management-agent',
   repo: { name: 'ha-unraid-management-agent', branch: 'main', origin: 'davidcoulson', upstream: 'tinkerologie', isWorktree: false },
 }
 
@@ -40,9 +40,9 @@ group('repo', () => {
 group('nudges', () => {
   test('ssh to the container from the Mac', () => {
     expect(sshTarget('ssh unraid "zpool status"', TARGETS)).toBe('unraid')
-    expect(sshTarget('ssh -i k dev@10.2.6.51 ls', TARGETS)).toBe('10.2.6.51')
-    expect(sshTarget('rsync -a x root@10.2.3.4:/tmp/', TARGETS)).toBe('10.2.3.4')
-    expect(sshTarget('ssh pvebox.coulson.io', TARGETS)).toBe(null)
+    expect(sshTarget('ssh -i k dev@192.0.2.51 ls', TARGETS)).toBe('192.0.2.51')
+    expect(sshTarget('rsync -a x root@192.0.2.4:/tmp/', TARGETS)).toBe('192.0.2.4')
+    expect(sshTarget('ssh pvebox.example.net', TARGETS)).toBe(null)
     expect(sshTarget('echo unraid', TARGETS)).toBe(null)
     expect(nudge(MAC, 'ssh unraid docker ps', HOMES, TARGETS)?.kind).toBe('ssh:unraid')
     expect(nudge({ ...MAC, kind: 'container' }, 'ssh unraid docker ps', HOMES, TARGETS)).toBe(null)

@@ -6,8 +6,8 @@
   "types": "./types/index.d.ts",
   "userConfig": {
     "unraidServer": { "type": "string", "title": "Unraid MCP server", "description": "As /mcp lists it; read-only calls.", "default": "plugin:unraid-mcp:unraid-mcp" },
-    "haServer": { "type": "string", "title": "Home Assistant MCP server", "description": "As /mcp lists it, or its tool-name spelling; empty leaves the lighthouse dark.", "default": "9701d7dd-0c3d-4d64-8a88-8109a1430f1b" },
-    "ollamaUrl": { "type": "string", "title": "Ollama URL", "description": "GET /api/ps only, for the heater.", "default": "http://10.2.6.50:11434" },
+    "haServer": { "type": "string", "title": "Home Assistant MCP server", "description": "As /mcp lists it, or its tool-name spelling; empty leaves the lighthouse dark.", "default": "" },
+    "ollamaUrl": { "type": "string", "title": "Ollama URL", "description": "GET /api/ps only, for the heater.", "default": "http://localhost:11434" },
     "swimmers": { "type": "number", "title": "Animated fish", "description": "At most this many fish swim; the rest hover, which keeps the pane light.", "default": 24 }
   },
   "license": "MIT"
