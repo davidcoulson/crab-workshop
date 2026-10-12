@@ -2,7 +2,8 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, Register } from 'claude-code'
 
 import type { Gate, Gates, Lane } from '../types'
-import { QUERY, asText, bandText, chips, counts, parseGates } from './gates'
+import { QUERY, asText, bandText, chips, counts, parseGates, parseReadyLimits } from './gates'
+import type { ReadyLimits } from './gates'
 import { crab } from './shared/crab'
 import { FONT, ago, svg, widthFor, xml } from './shared/draw'
 
@@ -13,6 +14,7 @@ const PANE = 'gatekeeper'
 const TITLE = 'Gates'
 
 let query = 'is:pr is:open author:@me archived:false sort:updated-desc'
+let readyLimits: ReadyLimits = { tinkerologie: 2 }
 let yours: string[] = []
 let pollMs = 300_000
 let fetching: Promise<string> | null = null
@@ -30,7 +32,7 @@ async function refreshNow($: EngineInterface): Promise<string> {
   await update($, gates, g => ({ ...g, isBusy: true }))
   try {
     const r = await $.process.run(['gh', 'api', 'graphql', '-f', `query=${QUERY}`, '-f', `q=${query}`], { timeoutMs: 60_000 })
-    const parsed = r.exitCode === 0 ? parseGates(r.stdout, yours) : null
+    const parsed = r.exitCode === 0 ? parseGates(r.stdout, yours, readyLimits) : null
     if (!parsed) throw new Error((r.stderr || r.stdout).trim().slice(0, 160) || `gh exited ${r.exitCode}`)
     const at = await $.clock.now()
     await update($, gates, () => ({ gates: parsed.gates, total: parsed.total, at, isBusy: false }))
@@ -79,6 +81,7 @@ function headSvg(W: number, g: Gate[]): string {
 
 export const register: Register = (on, options) => {
   query = String(options.query ?? query)
+  if (typeof options.readyLimits === 'string') readyLimits = parseReadyLimits(options.readyLimits)
   yours = ((options.yourBoxes as readonly string[] | undefined) ?? []).map(String)
   pollMs = Math.max(0, Number(options.pollMinutes ?? 5)) * 60_000
 

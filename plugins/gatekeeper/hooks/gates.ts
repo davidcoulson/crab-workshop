@@ -3,12 +3,12 @@
 import type { Gate, Lane } from '../types'
 
 export const QUERY = `query($q: String!) {
-  search(query: $q, type: ISSUE, first: 50) {
+  search(query: $q, type: ISSUE, first: 100) {
     issueCount
     nodes {
       ... on PullRequest {
         number title url isDraft body mergeable reviewDecision
-        repository { nameWithOwner }
+        repository { nameWithOwner viewerPermission }
         commits(last: 1) { nodes { commit { statusCheckRollup { state contexts(first: 60) { nodes {
           __typename
           ... on CheckRun { name conclusion status }
@@ -30,7 +30,7 @@ type Node = {
   body?: string | null
   mergeable?: string
   reviewDecision?: string | null
-  repository?: { nameWithOwner?: string }
+  repository?: { nameWithOwner?: string; viewerPermission?: string | null }
   commits?: { nodes?: { commit?: { statusCheckRollup?: { state?: string; contexts?: { nodes?: Check[] } } | null } }[] }
   reviewThreads?: { nodes?: { isResolved?: boolean; comments?: { nodes?: { author?: { login?: string } | null }[] } }[] }
   latestReviews?: { nodes?: { author?: { login?: string } | null; state?: string }[] }
@@ -121,13 +121,50 @@ export function laneOf(g: Omit<Gate, 'lane' | 'why'>): { lane: Lane; why: string
   return { lane: 'waiting', why: g.reviewDecision === 'CHANGES_REQUESTED' ? 'maintainer asked for changes' : 'waiting on maintainers' }
 }
 
-export function parseGates(text: string, yours: readonly string[]): { gates: Gate[]; total: number } | null {
+/** Repos (`owner/repo`) or owners (`owner`) that cap how many PRs a contributor without write access may have out of draft, with the cap. */
+export type ReadyLimits = Readonly<Record<string, number>>
+const WRITERS = new Set(['ADMIN', 'MAINTAIN', 'WRITE'])
+
+/** "tinkerologie=2, owner/repo=3" into { tinkerologie: 2, 'owner/repo': 3 }. */
+export function parseReadyLimits(spec: string): ReadyLimits {
+  const out: Record<string, number> = {}
+  for (const part of spec.split(/[,\s]+/)) {
+    const m = part.match(/^([\w.-]+(?:\/[\w.-]+)?)=(\d+)$/)
+    if (m && m[1] && m[2]) out[m[1].toLowerCase()] = Number(m[2])
+  }
+  return out
+}
+
+const limitFor = (repo: string, limits: ReadyLimits): number | undefined => limits[repo.toLowerCase()] ?? limits[repo.split('/')[0]?.toLowerCase() ?? '']
+
+/**
+ * A green draft is yours to mark ready, unless the repo won't let you: where
+ * it caps contributors' open, non-draft PRs, you can't write, and you are at
+ * the cap, the Ready button is disabled. Those drafts wait (for one of the
+ * others to merge or close) instead of asking you for something you can't do.
+ */
+export function holdAtReadyLimit(gates: Gate[], nodes: readonly Node[], limits: ReadyLimits): Gate[] {
+  const perm = new Map<string, string | null | undefined>()
+  for (const n of nodes) if (n.repository?.nameWithOwner) perm.set(n.repository.nameWithOwner, n.repository.viewerPermission)
+  const ready = new Map<string, number>()
+  for (const g of gates) if (!g.isDraft) ready.set(g.repo, (ready.get(g.repo) ?? 0) + 1)
+  return gates.map(g => {
+    const cap = limitFor(g.repo, limits)
+    const n = ready.get(g.repo) ?? 0
+    const capped = cap !== undefined && !WRITERS.has(String(perm.get(g.repo) ?? '').toUpperCase()) && n >= cap
+    if (!(capped && g.isDraft && g.lane === 'you' && !g.yourBoxes.length)) return g
+    return { ...g, lane: 'waiting' as Lane, why: `held: ${n} of ${cap} ready PRs already open here; mark ready when one merges` }
+  })
+}
+
+export function parseGates(text: string, yours: readonly string[], limits: ReadyLimits = {}): { gates: Gate[]; total: number } | null {
   try {
     const v = JSON.parse(text) as { data?: { search?: { issueCount?: number; nodes?: Node[] } }; errors?: { message?: string }[] }
     const s = v.data?.search
     if (!s) return null
-    const gates = (s.nodes ?? []).map(n => toGate(n, yours)).filter((g): g is Gate => g !== null)
-    return { gates: order(gates), total: s.issueCount ?? gates.length }
+    const nodes = s.nodes ?? []
+    const gates = nodes.map(n => toGate(n, yours)).filter((g): g is Gate => g !== null)
+    return { gates: order(holdAtReadyLimit(gates, nodes, limits)), total: s.issueCount ?? gates.length }
   } catch {
     return null
   }

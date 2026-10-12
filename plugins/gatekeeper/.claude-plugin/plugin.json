@@ -1,8 +1,11 @@
 {
   "name": "gatekeeper",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Your open PRs and what each waits on (/gates): the template boxes only you can tick, CodeRabbit threads and change requests, Codecov, CI, conflicts and drafts ready for you, sorted so what needs you comes first. A band above the prompt counts them; Claude can ask through the gates tool.",
-  "author": { "name": "David Coulson", "url": "https://github.com/davidcoulson" },
+  "author": {
+    "name": "David Coulson",
+    "url": "https://github.com/davidcoulson"
+  },
   "types": "./types/index.d.ts",
   "userConfig": {
     "query": {
@@ -16,13 +19,33 @@
       "multiple": true,
       "title": "Boxes only you tick",
       "description": "Words that mark a PR-template checkbox as yours to tick (case-insensitive substrings).",
-      "default": ["built and ran", "human", "manually tested", "tested locally", "tested it locally", "i have tested", "i have read", "i confirm", "i agree", "verified this change", "pre-commit", "reviewed my own", "self-review"]
+      "default": [
+        "built and ran",
+        "human",
+        "manually tested",
+        "tested locally",
+        "tested it locally",
+        "i have tested",
+        "i have read",
+        "i confirm",
+        "i agree",
+        "verified this change",
+        "pre-commit",
+        "reviewed my own",
+        "self-review"
+      ]
     },
     "pollMinutes": {
       "type": "number",
       "title": "Refresh every (minutes)",
       "description": "Also refreshed shortly after a git push or a gh pr command; 0 refreshes only then and on /gates.",
       "default": 5
+    },
+    "readyLimits": {
+      "type": "string",
+      "title": "Ready-PR limits",
+      "description": "Repos or owners that cap how many open, non-draft PRs a contributor without write access may have, as owner=N or owner/repo=N, comma-separated. A green draft there waits instead of asking you to mark it ready while you're at the cap.",
+      "default": "tinkerologie=2"
     }
   },
   "license": "MIT"

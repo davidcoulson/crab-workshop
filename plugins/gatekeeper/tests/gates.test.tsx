@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'claude-code/testing'
 
-import { asText, parseGates, yourUnticked } from '../hooks/gates'
+import { asText, parseGates, parseReadyLimits, yourUnticked } from '../hooks/gates'
 
 const YOURS = ['built and ran', 'human', 'pre-commit']
 
@@ -62,6 +62,32 @@ describe('gates', () => {
     const text = asText(g?.gates ?? [], 3)
     expect(text).toContain('gates: 1 need you · 1 need work · 1 waiting')
     expect(text).toContain('☐ A human reviewed this change')
+  })
+  test('green drafts wait where the repo caps ready PRs and you are at the cap', () => {
+    const green = { body: '', repository: { nameWithOwner: 'tinkerologie/ha-unraid-management-agent', viewerPermission: 'READ' } }
+    const answer = (ready: number, perm = 'READ') =>
+      JSON.stringify({
+        data: {
+          search: {
+            issueCount: ready + 2,
+            nodes: [
+              ...Array.from({ length: ready }, (_, i) => pr({ ...green, number: 300 + i, isDraft: false, repository: { ...green.repository, viewerPermission: perm } })),
+              pr({ ...green, number: 207, repository: { ...green.repository, viewerPermission: perm } }),
+              // Another owner without a configured cap: still yours, however many are ready there.
+              pr({ number: 869, body: '', repository: { nameWithOwner: 'agittins/bermuda', viewerPermission: 'READ' } }),
+            ],
+          },
+        },
+      })
+    const limits = parseReadyLimits('tinkerologie=2, other/repo=3')
+    expect(limits).toEqual({ tinkerologie: 2, 'other/repo': 3 })
+    const lane = (text: string, n: number, l = limits) => parseGates(text, YOURS, l)?.gates.find(g => g.number === n)
+    expect(lane(answer(2), 207)?.lane).toBe('waiting')
+    expect(lane(answer(2), 207)?.why).toBe('held: 2 of 2 ready PRs already open here; mark ready when one merges')
+    expect(lane(answer(2), 869)?.lane).toBe('you')
+    expect(lane(answer(1), 207)?.lane).toBe('you')
+    expect(lane(answer(2, 'WRITE'), 207)?.lane).toBe('you')
+    expect(lane(answer(2), 207, {})?.lane).toBe('you')
   })
 })
 
